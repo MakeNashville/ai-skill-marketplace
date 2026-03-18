@@ -1,0 +1,17 @@
+{
+  "version": "1.0.0",
+  "skills": [
+    {
+      "name": "makerspace-signage-cards",
+      "description": "Convert equipment manuals and docs into print-ready makerspace signage cards for Canva Bulk Create",
+      "tags": ["signage", "canva", "makerspace", "printing"],
+      "path": "skills/makerspace-signage-cards"
+    },
+    {
+      "name": "outline-publisher",
+      "description": "Publish markdown content with images to the Make Nashville Outline wiki",
+      "tags": ["outline", "wiki", "documentation", "publishing"],
+      "path": "skills/outline-publisher"
+    }
+  ]
+}
