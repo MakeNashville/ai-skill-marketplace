@@ -98,6 +98,7 @@ if [[ -n "$SKILL_NAME" ]]; then
     fi
 else
     for skill_dir in "$SKILLS_DIR"/*/; do
+        [[ -d "$skill_dir" ]] || continue
         skill="$(basename "$skill_dir")"
         if $REMOVE; then
             remove_skill "$skill" "$PROJECT_PATH"
