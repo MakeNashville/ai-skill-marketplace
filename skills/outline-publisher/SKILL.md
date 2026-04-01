@@ -9,9 +9,20 @@ Publish markdown content — with images — to the Make Nashville Outline wiki 
 
 ## Overview
 
-This skill takes markdown content (from a file, URL, or inline text) and publishes it to Outline as a collection of documents. It handles image uploads, content splitting, and collection management via the Outline API.
+This skill takes markdown content (from a file, URL, or inline text) and publishes it to Outline as a collection of documents. It handles image uploads, content splitting, and collection management via the **Make Nashville Wiki** MCP server.
 
-Before making any API calls, read `references/outline-api-guide.md` for the full API surface, authentication details, and request/response formats.
+## Prerequisites
+
+This skill requires the **Make Nashville Wiki** MCP server to be configured. The MCP server handles authentication and provides these tools:
+
+- `list_collections` — search/list collections
+- `create_collection` — create a new collection
+- `update_collection` — update an existing collection
+- `list_documents` — search/list documents
+- `create_document` — create a document in a collection
+- `move_document` — move a document between collections
+
+For image uploads, read `references/outline-api-guide.md` for the raw API details (the MCP server does not handle attachments).
 
 ---
 
@@ -44,39 +55,27 @@ Don't assume — ask. The goal is to publish content that's organized the way th
 - Are there images that need to be uploaded?
 - Should any sections be excluded?
 
-### Step 3: Check Environment
+### Step 3: Check for Existing Collection
 
-Verify the `OUTLINE_TOKEN` environment variable is set. If not, provide setup instructions:
-
-> To use this skill, you need an Outline API token:
->
-> 1. Go to https://wiki.makenashville.org/settings/api
-> 2. Create a new API token with write permissions
-> 3. Set the environment variable: `export OUTLINE_TOKEN=your_token_here`
-
-The Outline URL defaults to `https://wiki.makenashville.org/`. To override, set `OUTLINE_URL`.
-
-### Step 4: Check for Existing Collection
-
-Before creating a new collection, search for existing ones via the `collections.list` API endpoint (see `references/outline-api-guide.md`).
-
-Use `WebFetch` to POST to `{OUTLINE_URL}/api/collections.list` with the collection name as a query.
+Before creating a new collection, use the `list_collections` MCP tool to search for existing ones by name.
 
 If a matching collection exists, ask the user whether to:
 - Add documents to the existing collection
 - Create a new collection anyway
 
-### Step 5: Upload Images
+### Step 4: Upload Images
 
 For any local images referenced in the markdown (matching `![alt](path)` patterns):
 
-1. **Get a pre-signed upload URL** — use `WebFetch` to POST to `{OUTLINE_URL}/api/attachments.create` with `name`, `contentType`, and `size` fields.
+1. **Get a pre-signed upload URL** — use `WebFetch` to POST to `https://wiki.makenashville.org/api/attachments.create` with `name`, `contentType`, and `size` fields. This requires the `OUTLINE_TOKEN` environment variable.
 2. **Upload the file to S3** — use `curl` via Bash to POST the file as multipart form data to the returned `uploadUrl`, including all S3 form fields.
 3. **Replace image references** — update the markdown to use the returned `attachment.url` instead of the local path.
 
 See `references/outline-api-guide.md` for the full request/response format and curl example.
 
-### Step 6: Split Content
+If there are no local images, skip this step entirely.
+
+### Step 5: Split Content
 
 If the user requested splitting by headings:
 
@@ -86,12 +85,12 @@ If the user requested splitting by headings:
 
 If the user wants a single document, keep the content as-is.
 
-### Step 7: Create Collection and Documents
+### Step 6: Create Collection and Documents
 
-1. **Create collection** (if needed) — use `WebFetch` to POST to `{OUTLINE_URL}/api/collections.create` with `name`, `description`, and `permission` fields.
-2. **Create documents** — for each section, use `WebFetch` to POST to `{OUTLINE_URL}/api/documents.create` with `collectionId`, `title`, `text`, and `publish` fields. Documents are created flat at the collection root.
+1. **Create collection** (if needed) — use the `create_collection` MCP tool with the collection name, description, and permission level.
+2. **Create documents** — for each section, use the `create_document` MCP tool with the collection ID, title, markdown text, and publish flag.
 
-### Step 8: Report Back
+### Step 7: Report Back
 
 Present the user with:
 - The collection URL
@@ -112,7 +111,8 @@ Present the user with:
 
 ## Common Pitfalls
 
-- **Missing API token.** Always check for `OUTLINE_TOKEN` before making any API calls.
+- **MCP server not configured.** If MCP tools are unavailable, tell the user to add the Make Nashville Wiki MCP server (`https://wiki.makenashville.org/mcp`) to their Claude config.
+- **Missing OUTLINE_TOKEN for images.** Image uploads still require the `OUTLINE_TOKEN` env var. Only needed when the content has local images.
 - **Forgetting to replace image paths.** After uploading images, the markdown must be updated with the new URLs before creating documents.
 - **Creating duplicate collections.** Always search first.
 - **Large documents.** If a single document is very long, suggest splitting by headings even if the user didn't ask.
